@@ -28,7 +28,7 @@ export function buildOpticalRays(scene: THREE.Scene): OpticalRaysController {
   raysRoot.name = 'OpticalRays';
   scene.add(raysRoot);
 
-  const numRaysPerBundle = 12;
+  const numRaysPerBundle = 6;
   const bundles: {
     subj: (typeof SUBJECTS)[number];
     idx: number;
@@ -152,8 +152,8 @@ export function buildOpticalRays(scene: THREE.Scene): OpticalRaysController {
   });
 
   // Central braided harmonic axial wavefront beam inside the cutaway barrel (visible at f/16 & f/5.6)
-  const axialStrands = 6;
-  const axialPts = 60;
+  const axialStrands = 4;
+  const axialPts = 64;
   const axialWaveLines: THREE.Line[] = [];
   for (let s = 0; s < axialStrands; s++) {
     const geom = new THREE.BufferGeometry();
@@ -162,7 +162,7 @@ export function buildOpticalRays(scene: THREE.Scene): OpticalRaysController {
     const mat = new THREE.LineBasicMaterial({
       color: s % 2 === 0 ? 0xf2fbff : 0x99dcff,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.65,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -178,8 +178,8 @@ export function buildOpticalRays(scene: THREE.Scene): OpticalRaysController {
     frontElementX = 0.45
   ) {
     const apNorm = Math.pow(2 / apertureN, 0.88);
-    const maxLensR = 0.46;
-    const beamR = 0.052 + apNorm * (maxLensR - 0.052);
+    const maxLensR = 0.38;
+    const beamR = 0.032 + apNorm * (maxLensR - 0.032);
 
     const xFront = frontElementX;
     const xFocusGrp = focusGroupX;
@@ -347,14 +347,14 @@ export function buildOpticalRays(scene: THREE.Scene): OpticalRaysController {
       const line = axialWaveLines[s];
       const posAttr = line.geometry.getAttribute('position') as THREE.BufferAttribute;
       const phase = (s / axialStrands) * Math.PI * 2;
-      const amp = 0.028 + apNorm * 0.032;
+      const amp = 0.018 + apNorm * 0.022;
 
       for (let p = 0; p < axialPts; p++) {
         const t = p / (axialPts - 1);
         const x = xFront + (xRear2 - xFront) * t;
         const env = Math.sin(t * Math.PI) * 0.85 + 0.15;
-        const wy = OPTICAL_AXIS_Y + Math.sin(t * 28 + phase) * amp * env;
-        const wz = Math.cos(t * 28 + phase) * amp * 0.55 * env;
+        const wy = OPTICAL_AXIS_Y + Math.sin(t * 14 + phase) * amp * env;
+        const wz = Math.cos(t * 14 + phase) * amp * 0.55 * env;
         posAttr.setXYZ(p, x, wy, wz);
       }
       posAttr.needsUpdate = true;

@@ -8,10 +8,10 @@ export const LENS_REAR_X = -2.65;
 export const LENS_IRIS_X = -1.58;
 export const LENS_FRONT_X = 0.50;
 
-export const VALLEY_MIN_X = 1.62;
-export const VALLEY_MAX_X = 5.10;
-export const VALLEY_HALF_Z = 1.75;
-export const VALLEY_BASE_Y = 3.04;
+export const VALLEY_MIN_X = 1.18;
+export const VALLEY_MAX_X = 4.65;
+export const VALLEY_HALF_Z = 1.65;
+export const VALLEY_BASE_Y = 2.52;
 
 export const CM_PER_UNIT = 23;
 export const MIN_FOCUS_D = 1.08; // ~25 cm
@@ -35,8 +35,8 @@ export const SUBJECTS: ValleySubject[] = [
     shortName: 'Foreground',
     index: 0,
     d: 1.61, // 37 cm
-    worldPos: [LENS_FRONT_X + 1.61, 3.62, 0.72],
-    rayOrigin: [LENS_FRONT_X + 1.61, 3.82, 0.72],
+    worldPos: [LENS_FRONT_X + 1.12, VALLEY_BASE_Y + 0.55, 0.52],
+    rayOrigin: [LENS_FRONT_X + 1.12, 3.68, 0.42],
     color: '#98f5b8',
   },
   {
@@ -45,8 +45,8 @@ export const SUBJECTS: ValleySubject[] = [
     shortName: 'Middle',
     index: 1,
     d: 2.35, // 54 cm
-    worldPos: [LENS_FRONT_X + 2.35, 3.45, -0.18],
-    rayOrigin: [LENS_FRONT_X + 2.35, 3.48, -0.05],
+    worldPos: [LENS_FRONT_X + 1.85, VALLEY_BASE_Y + 0.42, -0.12],
+    rayOrigin: [LENS_FRONT_X + 1.85, 3.52, -0.05],
     color: '#ffd089',
   },
   {
@@ -55,8 +55,8 @@ export const SUBJECTS: ValleySubject[] = [
     shortName: 'Background',
     index: 2,
     d: 3.65, // 84 cm
-    worldPos: [LENS_FRONT_X + 3.65, 4.35, -0.42],
-    rayOrigin: [LENS_FRONT_X + 3.65, 4.35, -0.42],
+    worldPos: [LENS_FRONT_X + 3.15, VALLEY_BASE_Y + 0.95, -0.35],
+    rayOrigin: [LENS_FRONT_X + 3.15, 3.92, -0.32],
     color: '#9ee6ff',
   },
 ];
@@ -95,11 +95,11 @@ export function formatDistCm(d: number, forceDecimal = false): string {
 
 /**
  * Calibrated Depth of Field bounds so at focusD = 2.35 (54 cm) and f/16,
- * (farD - nearD) * 23 = 12.2 cm (matching the exact reference readout!),
+ * (farD - nearD) * 23 = 12.2 cm (matching the exact reference readout 12.2 cm),
  * and at f/2 it equals 1.5 cm.
  */
 export function computeDofBounds(focusD: number, apertureN: number): [number, number] {
-  const cocFactor = 0.002985 * apertureN;
+  const cocFactor = 0.002962 * apertureN;
   const invFocus = 1 / Math.max(focusD, 0.05);
   const nearD = 1 / (invFocus + cocFactor);
   const farD = invFocus - cocFactor > 1e-4 ? 1 / (invFocus - cocFactor) : Infinity;
@@ -154,34 +154,34 @@ export interface CameraPreset {
 }
 
 /**
- * 5 Camera Presets:
- * Index 0 is the exact Hero Cutaway Lens framing matching the user's screenshot!
+ * Camera Presets:
+ * Index 0 is the exact Hero Cutaway Lens framing matching the user's reference post!
  */
 export const CAMERA_PRESETS: CameraPreset[] = [
   {
     name: 'Cutaway Lens Hero View',
-    pos: new THREE.Vector3(-0.92, 3.68, 4.42),
-    target: new THREE.Vector3(-0.82, 3.46, 0.0),
-    fov: 28,
-    dofDist: 4.45,
+    pos: new THREE.Vector3(-0.62, 3.60, 6.48),
+    target: new THREE.Vector3(-0.56, 3.42, 0.0),
+    fov: 31.5,
+    dofDist: 6.48,
   },
   {
     name: 'Optical Bench Overview',
-    pos: new THREE.Vector3(-0.65, 5.25, 14.55),
-    target: new THREE.Vector3(0.22, 2.96, 0.0),
+    pos: new THREE.Vector3(-0.45, 5.15, 13.8),
+    target: new THREE.Vector3(0.10, 3.10, 0.0),
     fov: 30,
-    dofDist: 14.6,
+    dofDist: 13.8,
   },
   {
     name: 'Plane of Focus in the Valley',
-    pos: new THREE.Vector3(0.45, 4.65, 5.45),
-    target: new THREE.Vector3(2.68, 3.44, -0.15),
+    pos: new THREE.Vector3(0.35, 4.35, 5.15),
+    target: new THREE.Vector3(2.35, 3.15, -0.10),
     fov: 30,
-    dofDist: 5.4,
+    dofDist: 5.15,
   },
   {
     name: 'Ground Glass Image Plane',
-    pos: new THREE.Vector3(-7.65, 3.86, 2.85),
+    pos: new THREE.Vector3(-7.45, 3.82, 2.85),
     target: new THREE.Vector3(-3.95, 3.48, 0.04),
     fov: 30,
     dofDist: 3.7,

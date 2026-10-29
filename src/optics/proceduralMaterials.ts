@@ -220,62 +220,70 @@ export function createOpticalGlassMaterial(
              : vec3(0.0, 1.0, 0.0);
 
            float radialViewDot = abs(dot(radialWorld, V));
-           float silhouette = pow(clamp(1.0 - radialViewDot, 0.0, 1.0), 2.1) * smoothstep(0.35, 0.99, rNorm);
-           float tightPolarTip = pow(clamp(1.0 - radialViewDot, 0.0, 1.0), 3.8) * smoothstep(0.72, 0.995, rNorm);
+           float silhouette = pow(clamp(1.0 - radialViewDot, 0.0, 1.0), 4.2) * smoothstep(0.78, 0.995, rNorm);
+           float tightPolarTip = pow(clamp(1.0 - radialViewDot, 0.0, 1.0), 6.5) * smoothstep(0.88, 0.998, rNorm);
 
-           float axialView = smoothstep(0.16, 0.70, abs(V.x));
-           float circularRim = smoothstep(0.65, 0.99, rNorm) * pow(rNorm, 1.7) * axialView;
+           float axialView = smoothstep(0.18, 0.72, abs(V.x));
+           float circularRim = smoothstep(0.84, 0.995, rNorm) * pow(rNorm, 3.2) * axialView;
 
            float isFace = smoothstep(0.25, 0.58, abs(vGlassLocalNormal.x));
            float isGroundRim = 1.0 - isFace;
            float isRightFace = step(0.0, vGlassLocalNormal.x);
 
            float zFront = clamp(vGlassPos.z / max(uGlassRadius, 0.1), -1.0, 1.0);
-           float frontHemi = smoothstep(-0.14, 0.24, zFront);
+           float yNorm = vGlassPos.y / max(uGlassRadius, 0.1);
+           float frontHemi = smoothstep(-0.25, 0.35, zFront);
 
-           float primaryArc = exp(-pow((zFront - 0.25) * 3.6, 2.0)) * frontHemi * isFace;
-           float meridianArc = exp(-pow((zFront - 0.02) * 5.4, 2.0)) * isFace * (0.48 + 0.52 * isRightFace);
+           // Crisp vertical crescent arc along the curved spherical glass profile
+           float crescentCurve = 0.26 * (1.0 - 0.55 * yNorm * yNorm);
+           float primaryArc = exp(-pow((zFront - crescentCurve) * 7.8, 2.0)) * isFace;
+           float secondaryArc = exp(-pow((zFront + 0.18 * (1.0 - 0.45 * yNorm * yNorm)) * 9.5, 2.0)) * isFace * (0.45 + 0.55 * isRightFace);
 
            vec3 R = reflect(-V, N);
-           float studioSpec1 = pow(max(0.0, dot(R, normalize(vec3(0.35, 0.78, 0.52)))), 14.0) * isFace;
-           float studioSpec2 = pow(max(0.0, dot(R, normalize(vec3(-0.45, 0.62, 0.64)))), 18.0) * isFace;
-           float orbitDomeSheen = (studioSpec1 * 0.58 + studioSpec2 * 0.45) * (0.28 + 0.72 * axialView);
+           float studioSpec1 = pow(max(0.0, dot(R, normalize(vec3(0.42, 0.68, 0.60)))), 24.0) * isFace;
+           float studioSpec2 = pow(max(0.0, dot(R, normalize(vec3(-0.38, 0.52, 0.76)))), 32.0) * isFace;
+           float orbitDomeSheen = (studioSpec1 * 0.72 + studioSpec2 * 0.48);
 
-           float warmBrass = exp(-pow((zFront - 0.15) * 3.0, 2.0)) * frontHemi * (1.0 - silhouette * 0.65) * 0.28 * isFace;
-           float bevelRing = smoothstep(0.92, 0.995, rNorm) * (silhouette * 0.88 + frontHemi * 0.26 + axialView * 0.68);
+           // Focused internal optical beam glow on the high-index doublet element (matching the bright cyan glow in the reference post)
+           float centerBeamGlow = exp(-pow(rNorm * 2.35, 2.0)) * step(0.6, uCoatingShift) * 0.75 * isFace;
 
-           vec3 coatCol = mix(uTintColor, vec3(0.58, 0.93, 1.0), 0.35 + 0.3 * uCoatingShift);
+           float warmBrass = exp(-pow((zFront - 0.12) * 4.5, 2.0)) * frontHemi * (1.0 - rNorm * 0.5) * 0.26 * isFace;
+           float bevelRing = smoothstep(0.94, 0.998, rNorm) * (silhouette * 0.85 + frontHemi * 0.24 + axialView * 0.55);
+
+           vec3 coatCol = mix(uTintColor, vec3(0.56, 0.91, 1.0), 0.35 + 0.3 * uCoatingShift);
 
            vec3 glassCol = coatCol * (
-             silhouette * 0.82 +
-             circularRim * 0.56 +
-             isGroundRim * (0.18 * frontHemi + 0.76 * silhouette + 0.48 * axialView) +
-             meridianArc * 0.36 +
-             axialView * 0.16 * isFace
+             silhouette * 0.68 +
+             circularRim * 0.45 +
+             isGroundRim * (0.14 * frontHemi + 0.52 * silhouette + 0.28 * axialView) +
+             secondaryArc * 0.48 +
+             centerBeamGlow * 0.95 +
+             0.04 * isFace
            ) * uRimStrength;
 
-           glassCol += vec3(0.94, 0.99, 1.0) * (
-             primaryArc * 0.46 +
-             orbitDomeSheen +
-             tightPolarTip * 0.84 * uRimStrength +
-             bevelRing * 0.62 * uRimStrength
+           glassCol += vec3(0.92, 0.98, 1.0) * (
+             primaryArc * 0.78 +
+             orbitDomeSheen * 0.85 +
+             centerBeamGlow * 0.65 +
+             tightPolarTip * 0.75 * uRimStrength +
+             bevelRing * 0.58 * uRimStrength
            );
            glassCol += vec3(0.98, 0.70, 0.32) * warmBrass;
 
-           gl_FragColor.rgb = min(glassCol, vec3(0.97));
+           gl_FragColor.rgb = min(glassCol, vec3(0.98));
 
-           float alpha = 0.025
-             + primaryArc * 0.18
-             + meridianArc * 0.13
-             + orbitDomeSheen * 0.44
-             + warmBrass * 0.13
-             + silhouette * 0.52 * uRimStrength
-             + circularRim * 0.36 * uRimStrength
-             + tightPolarTip * 0.38 * uRimStrength
-             + bevelRing * 0.36 * uRimStrength
-             + axialView * 0.09 * isFace
-             + isGroundRim * (0.06 * frontHemi + 0.48 * silhouette + 0.30 * axialView);
-           gl_FragColor.a = clamp(alpha, 0.025, 0.84);
+           float alpha = 0.022
+             + primaryArc * 0.38
+             + secondaryArc * 0.22
+             + orbitDomeSheen * 0.38
+             + centerBeamGlow * 0.46
+             + warmBrass * 0.12
+             + silhouette * 0.42 * uRimStrength
+             + circularRim * 0.28 * uRimStrength
+             + tightPolarTip * 0.36 * uRimStrength
+             + bevelRing * 0.34 * uRimStrength
+             + isGroundRim * (0.08 * frontHemi + 0.35 * silhouette);
+           gl_FragColor.a = clamp(alpha, 0.022, 0.78);
          }
          #include <dithering_fragment>`
       );

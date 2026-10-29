@@ -57,38 +57,38 @@ const LENS_CALLOUT_DEFS: CalloutDef[] = [
   {
     id: 'helicoid',
     label: 'Helicoid',
-    getWorldAnchor: () => new THREE.Vector3(-0.86, OPTICAL_AXIS_Y + 1.42, 0.0),
-    offsetPx: [0, -28],
+    getWorldAnchor: () => new THREE.Vector3(-0.86, OPTICAL_AXIS_Y + 1.48, 0.0),
+    offsetPx: [0, -22],
     align: 'center',
   },
   {
     id: 'focus-group',
     label: 'Focus group',
     getWorldAnchor: (focusGroupX) =>
-      new THREE.Vector3(focusGroupX - 0.05, OPTICAL_AXIS_Y + 0.82, 0.15),
-    offsetPx: [-54, -36],
+      new THREE.Vector3(focusGroupX - 0.05, OPTICAL_AXIS_Y + 0.84, 0.15),
+    offsetPx: [-44, -26],
     align: 'right',
   },
   {
     id: 'focusing-ring',
     label: 'Focusing ring',
-    getWorldAnchor: () => new THREE.Vector3(-0.32, OPTICAL_AXIS_Y + 0.98, 0.35),
-    offsetPx: [42, -52],
+    getWorldAnchor: () => new THREE.Vector3(-0.28, OPTICAL_AXIS_Y + 0.96, 0.35),
+    offsetPx: [42, -38],
     align: 'left',
   },
   {
     id: 'front-element',
     label: 'Front element',
     getWorldAnchor: (_fgX, frontElemX) =>
-      new THREE.Vector3(frontElemX - 0.04, OPTICAL_AXIS_Y + 0.76, 0.25),
-    offsetPx: [38, -32],
+      new THREE.Vector3(frontElemX - 0.02, OPTICAL_AXIS_Y + 0.78, 0.22),
+    offsetPx: [34, -26],
     align: 'left',
   },
   {
     id: 'rear-group',
     label: 'Rear group',
-    getWorldAnchor: () => new THREE.Vector3(-2.22, OPTICAL_AXIS_Y - 0.78, 0.25),
-    offsetPx: [-48, 22],
+    getWorldAnchor: () => new THREE.Vector3(-2.28, OPTICAL_AXIS_Y - 0.82, 0.25),
+    offsetPx: [-38, 18],
     align: 'right',
   },
 ];
@@ -480,6 +480,7 @@ export const OpticalBenchCanvas: React.FC<OpticalBenchCanvasProps> = ({
       if (frameCount % 2 === 0) {
         const w = container.clientWidth || window.innerWidth;
         const h = container.clientHeight || window.innerHeight;
+        const uiScale = clamp(w / 1600, 0.55, 1.15);
         const nextCallouts: CalloutScreenPos[] = LENS_CALLOUT_DEFS.map((def) => {
           const worldPt = def.getWorldAnchor(fgX, frontElemX);
           projVec.copy(worldPt).project(camera);
@@ -491,8 +492,8 @@ export const OpticalBenchCanvas: React.FC<OpticalBenchCanvasProps> = ({
             label: def.label,
             anchorX,
             anchorY,
-            labelX: anchorX + def.offsetPx[0],
-            labelY: anchorY + def.offsetPx[1],
+            labelX: anchorX + def.offsetPx[0] * uiScale,
+            labelY: anchorY + def.offsetPx[1] * uiScale,
             visible,
             align: def.align,
           };
@@ -566,9 +567,9 @@ export const OpticalBenchCanvas: React.FC<OpticalBenchCanvasProps> = ({
                     ? 'translate(-50%, -100%)'
                     : 'translate(0%, -50%)',
               }}
-              className="absolute flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0c1017]/75 border border-white/15 backdrop-blur-sm text-[11px] font-mono tracking-wide text-slate-200/95 whitespace-nowrap shadow-sm"
+              className="absolute flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0c1017]/75 border border-white/15 backdrop-blur-sm text-[10px] font-mono tracking-wide text-slate-200/95 whitespace-nowrap shadow-sm"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-300/90 inline-block" />
+              <span className="w-1 h-1 rounded-full bg-sky-300/90 inline-block" />
               <span>{c.label}</span>
             </div>
           ) : null

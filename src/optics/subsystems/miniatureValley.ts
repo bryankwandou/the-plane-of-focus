@@ -376,15 +376,15 @@ export function buildMiniatureValley(
     return tree;
   };
 
-  // Foreground Cedar (Subject 0 at d = 1.61 -> x = 2.11, z = 0.72)
-  // Plus extra foreground trees near z = +0.9..+1.35 so they appear right at the right edge of the Hero Lens camera view!
-  addPineTree(SUBJECTS[0].worldPos[0], VALLEY_BASE_Y + 0.14, SUBJECTS[0].worldPos[2], 1.15, true);
-  addPineTree(1.88, VALLEY_BASE_Y + 0.15, 1.12, 1.08, true);
-  addPineTree(2.18, VALLEY_BASE_Y + 0.16, 1.28, 0.92, false);
-  addPineTree(1.95, VALLEY_BASE_Y + 0.16, -0.95, 1.0, false);
-  addPineTree(2.42, VALLEY_BASE_Y + 0.18, 0.96, 0.88, true);
-  addPineTree(3.15, VALLEY_BASE_Y + 0.20, 0.82, 1.05, false);
-  addPineTree(3.38, VALLEY_BASE_Y + 0.22, -0.88, 1.12, true);
+  // Foreground Cedar (Subject 0) + foreground trees positioned right at the right edge of the Hero Lens view
+  addPineTree(SUBJECTS[0].worldPos[0], VALLEY_BASE_Y + 0.14, SUBJECTS[0].worldPos[2], 1.18, true);
+  addPineTree(1.36, VALLEY_BASE_Y + 0.14, 0.86, 1.12, true);
+  addPineTree(1.56, VALLEY_BASE_Y + 0.15, 1.18, 0.96, false);
+  addPineTree(1.82, VALLEY_BASE_Y + 0.16, 0.98, 1.04, true);
+  addPineTree(1.65, VALLEY_BASE_Y + 0.16, -0.85, 1.0, false);
+  addPineTree(2.42, VALLEY_BASE_Y + 0.18, 0.86, 0.92, true);
+  addPineTree(2.95, VALLEY_BASE_Y + 0.20, 0.78, 1.05, false);
+  addPineTree(3.18, VALLEY_BASE_Y + 0.22, -0.82, 1.12, true);
 
   // Cozy Timber Cabin (Subject 1 at d = 2.35 -> x = 2.85, z = -0.18)
   const cabinGroup = new THREE.Group();
@@ -543,14 +543,15 @@ export function buildMiniatureValley(
   group.add(dofZoneMesh);
 
   const updateFocusPlane = (focusD: number, apertureN: number, _timeSec: number) => {
-    const planeX = clamp(LENS_FRONT_X + focusD, VALLEY_MIN_X, VALLEY_MAX_X);
+    const valleyShift = -0.50;
+    const planeX = clamp(LENS_FRONT_X + focusD + valleyShift, VALLEY_MIN_X, VALLEY_MAX_X);
     planeOfFocusGroup.position.x = planeX;
     contourSystem.updatePlaneX(planeX);
 
     const [nearD, farD] = computeDofBounds(focusD, apertureN);
-    const nearX = clamp(LENS_FRONT_X + nearD, VALLEY_MIN_X, VALLEY_MAX_X);
+    const nearX = clamp(LENS_FRONT_X + nearD + valleyShift, VALLEY_MIN_X, VALLEY_MAX_X);
     const farX = clamp(
-      LENS_FRONT_X + (isFinite(farD) ? farD : 20),
+      LENS_FRONT_X + (isFinite(farD) ? farD : 20) + valleyShift,
       VALLEY_MIN_X,
       VALLEY_MAX_X
     );

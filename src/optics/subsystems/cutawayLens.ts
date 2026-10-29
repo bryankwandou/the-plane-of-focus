@@ -268,18 +268,18 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
   irisGroup.position.x = irisX;
   lensRoot.add(irisGroup);
 
-  const irisBrassRing = makeRingTube(-0.055, 0.055, 0.78, 0.875, MATS.brushedBrass);
+  const irisBrassRing = makeRingTube(-0.075, 0.075, 0.72, 0.875, MATS.brushedBrass);
   irisGroup.add(irisBrassRing);
 
-  const lensIrisMat = createIrisMaterial('#1e222a');
-  const lensIrisMesh = new THREE.Mesh(new THREE.CircleGeometry(0.79, 64), lensIrisMat);
+  const lensIrisMat = createIrisMaterial('#181c24');
+  const lensIrisMesh = new THREE.Mesh(new THREE.CircleGeometry(0.76, 64), lensIrisMat);
   lensIrisMesh.rotation.y = Math.PI / 2;
   lensIrisMesh.userData = { interactiveType: 'lens-iris' };
   irisGroup.add(lensIrisMesh);
   interactiveMeshes.push(lensIrisMesh);
 
   // Warm internal golden point light near the brass aperture ring
-  const irisWarmLight = new THREE.PointLight('#ffaa44', 1.4, 2.2, 1.5);
+  const irisWarmLight = new THREE.PointLight('#ffaa44', 1.8, 2.4, 1.5);
   irisWarmLight.position.set(0.08, 0.0, 0.35);
   irisGroup.add(irisWarmLight);
 
@@ -339,11 +339,11 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
   lensRoot.add(mainGearCollar);
 
   const helicoidGroup = new THREE.Group();
-  helicoidGroup.position.set(mainGearX - 0.04, 1.26, 0);
+  helicoidGroup.position.set(mainGearX - 0.04, 1.24, 0);
   lensRoot.add(helicoidGroup);
 
   const pinionGear = new THREE.Mesh(
-    createGearGeometry(0.045, 0.185, 0.052, 14, 0.24),
+    createGearGeometry(0.05, 0.23, 0.085, 14, 0.26),
     MATS.brushedBrass
   );
   pinionGear.castShadow = true;
@@ -351,19 +351,28 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
   helicoidGroup.add(pinionGear);
   interactiveMeshes.push(pinionGear);
 
+  const secondaryPinionGear = new THREE.Mesh(
+    createGearGeometry(0.04, 0.145, 0.065, 12, 0.22),
+    MATS.brushedBrass
+  );
+  secondaryPinionGear.position.x = -0.10;
+  secondaryPinionGear.userData = { interactiveType: 'focus-ring' };
+  helicoidGroup.add(secondaryPinionGear);
+
   const pinionShaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.036, 0.036, 0.48, 24),
-    MATS.brushedSteel
+    new THREE.CylinderGeometry(0.036, 0.036, 0.52, 24),
+    MATS.brushedBrass
   );
   pinionShaft.rotation.z = Math.PI / 2;
+  pinionShaft.position.x = -0.04;
   helicoidGroup.add(pinionShaft);
 
   const pinionBracket = new THREE.Mesh(
-    makeRoundedBox(0.065, 0.24, 0.09, 0.018),
+    makeRoundedBox(0.08, 0.28, 0.11, 0.018),
     MATS.brushedBrass
   );
-  pinionBracket.position.set(-0.17, 0.02, 0.04);
-  pinionBracket.rotation.z = 0.22;
+  pinionBracket.position.set(-0.19, 0.02, 0.04);
+  pinionBracket.rotation.z = 0.18;
   helicoidGroup.add(pinionBracket);
 
   // 8. Wide Black Ribbed / Knurled Focus Ring Barrel
@@ -446,7 +455,7 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
     irisGlowPulse = Math.max(0, irisGlowPulse - dt * 2.2);
 
     const apNorm = Math.pow(2 / apertureN, 0.82);
-    const openRadius = 0.13 + apNorm * 0.64;
+    const openRadius = 0.56 + apNorm * 0.34;
     lensIrisMat.userData.uniforms.uAp.value = openRadius;
     lensIrisMat.userData.uniforms.uRot.value = (1 - apNorm) * 0.62;
     lensIrisMat.userData.uniforms.uGlow.value = irisGlowPulse;

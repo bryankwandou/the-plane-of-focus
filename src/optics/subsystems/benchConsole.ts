@@ -169,31 +169,31 @@ export function buildBenchConsole(mats: {
   rulerPlate.receiveShadow = true;
   group.add(rulerPlate);
 
-  // 3. Interactive Brass Rail Focus Thumbwheel Gear at the bottom center of the Hero Lens view!
+  // 3. Interactive Brass Rail Focus Thumbwheel Knob at the bottom center of the Hero Lens view!
   const thumbGroup = new THREE.Group();
-  thumbGroup.position.set(-0.96, 1.96, 1.24);
+  thumbGroup.position.set(-0.82, 1.98, 1.26);
 
   const thumbBracket = new THREE.Mesh(
     new THREE.BoxGeometry(0.42, 0.18, 0.22),
     mats.darkAnodized
   );
-  thumbBracket.position.set(0, 0.02, -0.06);
+  thumbBracket.position.set(0, 0.02, -0.08);
   thumbGroup.add(thumbBracket);
 
-  const thumbGearGeo = createGearGeometry(0.165, 0.188, 0.16, 36, 0.18);
+  const thumbGearGeo = createGearGeometry(0.18, 0.22, 0.14, 40, 0.16);
   const railThumbGear = new THREE.Mesh(thumbGearGeo, mats.brightBrass);
   railThumbGear.rotation.y = Math.PI / 2;
-  railThumbGear.position.set(0, 0.04, 0.04);
+  railThumbGear.position.set(0, 0.02, 0.06);
   railThumbGear.castShadow = true;
   railThumbGear.userData = { type: 'focusRing' };
   thumbGroup.add(railThumbGear);
 
-  // Inner brass cap on the thumbwheel matching the screenshot
+  // Inner beveled spun-brass knob face facing the viewer
   const thumbCap = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.13, 0.13, 0.175, 32),
+    new THREE.CylinderGeometry(0.175, 0.185, 0.15, 36),
     mats.brushedBrass
   );
-  thumbCap.rotation.z = Math.PI / 2;
+  thumbCap.rotation.x = Math.PI / 2;
   thumbCap.position.copy(railThumbGear.position);
   thumbCap.userData = { type: 'focusRing' };
   thumbGroup.add(thumbCap);

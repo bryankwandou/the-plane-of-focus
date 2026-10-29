@@ -61,9 +61,9 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
   // Brushed Brass Nameplate Plaque (@NAYRBRYANGAMING)
   const plaqueTex = makeCanvasTexture(512, 192, (ctx, w, h) => {
     const grad = ctx.createLinearGradient(0, 0, w, h);
-    grad.addColorStop(0, '#e4b25c');
-    grad.addColorStop(0.5, '#cc9540');
-    grad.addColorStop(1, '#9e6e26');
+    grad.addColorStop(0, '#f7ce78');
+    grad.addColorStop(0.5, '#e2ad52');
+    grad.addColorStop(1, '#b8822c');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
@@ -71,24 +71,27 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
     ctx.lineWidth = 6;
     ctx.strokeRect(8, 8, w - 16, h - 16);
 
-    ctx.fillStyle = '#1f1404';
-    ctx.font = '800 36px "Outfit", sans-serif';
+    ctx.fillStyle = '#180f02';
+    ctx.font = '800 38px "Outfit", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('@NAYRBRYANGAMING', w / 2, 86);
 
-    ctx.font = '500 30px "DM Mono", monospace';
+    ctx.font = '600 31px "DM Mono", monospace';
     ctx.fillText('F = 50MM · 1:2', w / 2, 144);
   });
 
   const plaqueMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.48, 0.18),
+    new THREE.PlaneGeometry(0.50, 0.19),
     new THREE.MeshStandardMaterial({
       map: plaqueTex,
-      metalness: 0.86,
-      roughness: 0.26,
+      metalness: 0.65,
+      roughness: 0.28,
+      emissive: new THREE.Color('#e2ad52'),
+      emissiveMap: plaqueTex,
+      emissiveIntensity: 0.28,
     })
   );
-  plaqueMesh.position.set(-2.12, -1.1, 0.285);
+  plaqueMesh.position.set(-2.12, -1.08, 0.29);
   plaqueMesh.userData = { interactiveType: 'x-profile' };
   pedestalsGroup.add(plaqueMesh);
   interactiveMeshes.push(plaqueMesh);
@@ -339,11 +342,11 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
   lensRoot.add(mainGearCollar);
 
   const helicoidGroup = new THREE.Group();
-  helicoidGroup.position.set(mainGearX - 0.04, 1.24, 0);
+  helicoidGroup.position.set(mainGearX - 0.04, 1.15, 0);
   lensRoot.add(helicoidGroup);
 
   const pinionGear = new THREE.Mesh(
-    createGearGeometry(0.05, 0.23, 0.085, 14, 0.26),
+    createGearGeometry(0.045, 0.175, 0.075, 14, 0.24),
     MATS.brushedBrass
   );
   pinionGear.castShadow = true;
@@ -352,10 +355,10 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
   interactiveMeshes.push(pinionGear);
 
   const secondaryPinionGear = new THREE.Mesh(
-    createGearGeometry(0.04, 0.145, 0.065, 12, 0.22),
+    createGearGeometry(0.035, 0.115, 0.055, 12, 0.20),
     MATS.brushedBrass
   );
-  secondaryPinionGear.position.x = -0.10;
+  secondaryPinionGear.position.x = -0.085;
   secondaryPinionGear.userData = { interactiveType: 'focus-ring' };
   helicoidGroup.add(secondaryPinionGear);
 
@@ -478,7 +481,7 @@ export function buildCutawayLens(scene: THREE.Scene): CutawayLensController {
     lockingSleeveGroup.scale.set(1, radialTuck, radialTuck);
     lockingSleeveGroup.visible = currentExploded < 0.94;
 
-    helicoidGroup.position.y = 1.13 + currentExploded * 0.13;
+    helicoidGroup.position.y = 1.06 + currentExploded * 0.10;
     const clampOffset = (1.0 - currentExploded) * 0.032;
     for (const cap of brassEndCaps) {
       cap.mesh.position.y = cap.baseY - cap.signY * clampOffset;

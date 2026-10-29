@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export const OPTICAL_AXIS_Y = 3.55;
 export const OPTICAL_AXIS_Z = 0;
 
-export const IMAGE_PLANE_X = -4.35;
+export const IMAGE_PLANE_X = -4.85;
 export const LENS_REAR_X = -2.65;
 export const LENS_IRIS_X = -1.58;
 export const LENS_FRONT_X = 0.50;
@@ -160,10 +160,10 @@ export interface CameraPreset {
 export const CAMERA_PRESETS: CameraPreset[] = [
   {
     name: 'Cutaway Lens Hero View',
-    pos: new THREE.Vector3(-0.62, 3.60, 6.48),
-    target: new THREE.Vector3(-0.56, 3.42, 0.0),
-    fov: 31.5,
-    dofDist: 6.48,
+    pos: new THREE.Vector3(-0.52, 3.65, 6.88),
+    target: new THREE.Vector3(-0.48, 3.48, 0.0),
+    fov: 32,
+    dofDist: 6.88,
   },
   {
     name: 'Optical Bench Overview',

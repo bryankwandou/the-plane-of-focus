@@ -1,250 +1,382 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  AperturePreset,
-  computeOpticalTelemetry,
-  FocusPreset,
-  LensAssemblyMode,
-  SUBJECT_TARGETS,
-} from './optics/opticalPhysics';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Camera, ExternalLink, HelpCircle, RotateCcw, X } from 'lucide-react';
 import { OpticalBenchCanvas } from './components/OpticalBenchCanvas';
-import { GroundGlassInspector } from './components/GroundGlassInspector';
-
-const APERTURE_OPTIONS: AperturePreset[] = [2, 5.6, 16];
+import {
+  SUBJECTS,
+  APERTURE_PRESETS,
+  CAMERA_PRESETS,
+  computeDofBounds,
+  distToSlider,
+  sliderToDist,
+  formatDistCm,
+  formatAperture,
+  buildExplanationParts,
+} from './optics/opticalPhysics';
 
 export function App() {
-  // Default state matches the exact reference screenshot: Middle (54 cm), f/16, Exploded
-  const [distanceCm, setDistanceCm] = useState<number>(54);
-  const [aperture, setAperture] = useState<AperturePreset>(16);
-  const [assemblyMode, setAssemblyMode] = useState<LensAssemblyMode>('exploded');
-  const [inspectorOpen, setInspectorOpen] = useState<boolean>(false);
+  // Default state matches the exact reference screenshot: Middle (54 cm), f/16, Exploded, Hero Cutaway Lens View
+  const [focusD, setFocusD] = useState<number>(SUBJECTS[1].d); // 2.35 -> 54 cm
+  const [apertureN, setApertureN] = useState<number>(16);      // f/16 -> 12.2 cm sharp zone
+  const [isExploded, setIsExploded] = useState<boolean>(true);
+  const [cameraPresetIndex, setCameraPresetIndex] = useState<number>(0);
+  const [resetSignal, setResetSignal] = useState<number>(0);
+  const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
-  const telemetry = useMemo(
-    () => computeOpticalTelemetry(distanceCm, aperture),
-    [distanceCm, aperture]
-  );
+  const cycleCameraPreset = useCallback(() => {
+    setCameraPresetIndex((prev) => (prev + 1) % CAMERA_PRESETS.length);
+  }, []);
 
-  // Keyboard shortcuts 1, 2, 3 as indicated by "drag the ring · 1 2 3" in the HUD
+  const resetCameraView = useCallback(() => {
+    setResetSignal((s) => s + 1);
+  }, []);
+
+  // Keyboard shortcuts matching the HUD hints (1 / 2 / 3, Q / W / E, X, C, R, ?)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '1') {
-        setDistanceCm(SUBJECT_TARGETS.foreground.distanceCm);
-      } else if (e.key === '2') {
-        setDistanceCm(SUBJECT_TARGETS.middle.distanceCm);
-      } else if (e.key === '3') {
-        setDistanceCm(SUBJECT_TARGETS.background.distanceCm);
-      } else if (e.key === 'ArrowLeft') {
-        setDistanceCm((prev) => Math.max(30, prev - 1));
-      } else if (e.key === 'ArrowRight') {
-        setDistanceCm((prev) => Math.min(110, prev + 1));
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      const key = e.key.toLowerCase();
+      if (key === '1') {
+        setFocusD(SUBJECTS[0].d);
+      } else if (key === '2') {
+        setFocusD(SUBJECTS[1].d);
+      } else if (key === '3') {
+        setFocusD(SUBJECTS[2].d);
+      } else if (key === 'q') {
+        setApertureN(APERTURE_PRESETS[0]);
+      } else if (key === 'w') {
+        // Only trigger aperture if not holding WASD movement or use Shift
+      } else if (key === 'x') {
+        setIsExploded((prev) => !prev);
+      } else if (key === 'c') {
+        cycleCameraPreset();
+      } else if (key === 'r') {
+        resetCameraView();
+      } else if (key === '?' || key === '/') {
+        setShowHelpModal((prev) => !prev);
+      } else if (key === 'escape') {
+        setShowHelpModal(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [cycleCameraPreset, resetCameraView]);
 
-  const handleSelectPreset = (preset: FocusPreset) => {
-    setDistanceCm(SUBJECT_TARGETS[preset].distanceCm);
-  };
+  const [nearD, farD] = computeDofBounds(focusD, apertureN);
+  const sharpZoneText = formatDistCm(farD - nearD, true);
+  const focusDistText = formatDistCm(focusD, false);
+  const apertureText = formatAperture(apertureN);
+  const explanation = buildExplanationParts(focusD, apertureN);
+
+  const sliderVal = distToSlider(focusD);
+  const nearSliderT = distToSlider(nearD);
+  const farSliderT = distToSlider(isFinite(farD) ? farD : 20);
+
+  // Determine which subject button is active
+  const activeSubjectIndex = SUBJECTS.findIndex((s) => Math.abs(s.d - focusD) < 0.14);
 
   return (
-    <main className="relative w-screen h-screen overflow-hidden bg-[#090b0f] select-none">
-      {/* Full-Viewport 3D WebGL Cutaway Optical Bench */}
+    <div className="relative w-screen h-screen overflow-hidden bg-[#0c0f14] text-slate-100 select-none font-sans">
+      {/* Full-Viewport 3D Optical Bench Laboratory */}
       <OpticalBenchCanvas
-        telemetry={telemetry}
-        assemblyMode={assemblyMode}
-        onDistanceChange={setDistanceCm}
+        focusD={focusD}
+        apertureN={apertureN}
+        isExploded={isExploded}
+        cameraPresetIndex={cameraPresetIndex}
+        resetSignal={resetSignal}
+        onFocusChange={setFocusD}
+        onApertureChange={setApertureN}
       />
 
-      {/* TOP-LEFT HUD: "THE PLANE OF FOCUS" + Telemetry Readout Table */}
-      <section
-        aria-label="Optical Telemetry and Explanation"
-        className="pointer-events-none fixed top-5 left-6 z-20 max-w-[295px]"
-      >
-        <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-[#8fa3bc] leading-none">
-          THE PLANE
+      {/* TOP-LEFT HUD: Title, Subtitle, Live Telemetry Readouts & Dynamic Optical Explanation */}
+      <div className="pointer-events-none absolute top-5 left-6 z-20 max-w-[330px]">
+        <div className="leading-none">
+          <div className="text-[14px] font-bold tracking-[0.22em] text-slate-200 uppercase">
+            THE PLANE
+          </div>
+          <h1 className="text-[30px] font-extrabold tracking-[0.04em] text-white uppercase mt-0.5">
+            OF FOCUS
+          </h1>
         </div>
-        <h1 className="text-[23px] font-bold tracking-[0.03em] text-[#f0f5fa] leading-tight mt-0.5">
-          OF FOCUS
-        </h1>
 
-        <p className="mt-2 text-[11px] leading-[1.48] text-[#b4c0cf] font-normal">
-          Everyone knows when a photo is blurry. Almost nobody has seen the exact
-          plane where it turns sharp. Turn the focus ring and watch it move.
+        <p className="mt-2.5 text-[12px] leading-[1.48] text-slate-300/90 font-normal">
+          Everyone knows when a photo is blurry. Almost nobody has seen the exact plane where it
+          turns sharp. Turn the focus ring and watch it move.
         </p>
 
-        {/* 3-Column Live Optical Readout (FOCUS | APERTURE | SHARP ZONE) */}
-        <div className="mt-3.5 grid grid-cols-3 border-y border-white/15 py-2">
-          <div className="pr-2 border-r border-white/10">
-            <div className="text-[8px] font-mono uppercase tracking-[0.14em] text-[#7e8fa6]">
+        {/* 3-Column Live Telemetry Bar: FOCUS | APERTURE | SHARP ZONE */}
+        <div className="mt-3.5 pt-2.5 pb-2.5 border-y border-white/15 grid grid-cols-3 gap-2">
+          <div>
+            <div className="text-[9px] font-mono uppercase tracking-[0.16em] text-slate-400">
               FOCUS
             </div>
-            <div className="mt-0.5 text-[14px] font-mono font-semibold text-[#f2f6fc]">
-              {telemetry.distanceCm} cm
+            <div className="mt-0.5 text-[16px] font-mono font-semibold text-white">
+              {focusDistText}
             </div>
           </div>
 
-          <div className="px-2.5 border-r border-white/10">
-            <div className="text-[8px] font-mono uppercase tracking-[0.14em] text-[#7e8fa6]">
+          <div className="border-l border-white/15 pl-3">
+            <div className="text-[9px] font-mono uppercase tracking-[0.16em] text-slate-400">
               APERTURE
             </div>
-            <div className="mt-0.5 text-[14px] font-mono font-semibold text-[#f2f6fc]">
-              f/{telemetry.fNumber}
+            <div className="mt-0.5 text-[16px] font-mono font-semibold text-white">
+              {apertureText}
             </div>
           </div>
 
-          <div className="pl-2.5">
-            <div className="text-[8px] font-mono uppercase tracking-[0.14em] text-[#7e8fa6]">
+          <div className="border-l border-white/15 pl-3">
+            <div className="text-[9px] font-mono uppercase tracking-[0.16em] text-slate-400">
               SHARP ZONE
             </div>
-            <div className="mt-0.5 text-[14px] font-mono font-semibold text-[#f2f6fc]">
-              {telemetry.sharpZoneCm.toFixed(1)} cm
+            <div className="mt-0.5 text-[16px] font-mono font-semibold text-white">
+              {sharpZoneText}
             </div>
           </div>
         </div>
 
-        {/* Dynamic Plane-of-Focus Explanation */}
-        <p className="mt-2.5 text-[10.5px] leading-[1.45] text-[#c2cddb]">
-          {telemetry.narrativeText.replace(
-            `Sharp zone: ${telemetry.sharpZoneCm.toFixed(1)} cm.`,
-            ''
-          )}
-          <strong className="font-semibold text-[#f2f6fc]">
-            Sharp zone: {telemetry.sharpZoneCm.toFixed(1)} cm.
-          </strong>
+        {/* Dynamic Optical Ray Explanation */}
+        <p className="mt-2.5 text-[11.5px] leading-[1.5] text-slate-300/90">
+          Only <span className="text-white font-semibold">{SUBJECTS[activeSubjectIndex >= 0 ? activeSubjectIndex : 1].name}</span> sits on the plane: its rays meet in{' '}
+          <span className="text-white font-semibold">one point on the glass</span>.{' '}
+          {explanation.body.replace(/^Only the [^:]+: its rays meet in one point on the glass\.\s*/, '')}{' '}
+          <span className="text-sky-200 font-semibold">{explanation.sharpZoneLabel}</span>
         </p>
-      </section>
+      </div>
 
-      {/* TOP-RIGHT HUD: Interactive Focus, Distance, Aperture & Exploded View Controls */}
-      <aside
-        aria-label="Lens Controls"
-        className="fixed top-5 right-6 z-20 w-[360px] rounded-lg bg-[#10141d]/85 backdrop-blur-md border border-white/12 px-3.5 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.65)]"
-      >
-        {/* Row 1 Header: FOCUS | drag the ring · 1 2 3 | DISTANCE | 54 cm */}
-        <div className="flex items-center justify-between text-[9px] font-mono tracking-wider">
+      {/* TOP-RIGHT HUD: Interactive Optical Control Card matching the reference screenshot */}
+      <div className="pointer-events-auto absolute top-5 right-6 z-20 w-[376px] rounded-xl bg-[#11161f]/85 border border-white/15 backdrop-blur-md p-3.5 shadow-2xl">
+        {/* Header Row: FOCUS | drag the ring · 1 2 3 | DISTANCE 54 cm */}
+        <div className="flex items-center justify-between text-[10px] font-mono tracking-[0.12em] text-slate-400 uppercase">
           <div className="flex items-center gap-2">
-            <span className="uppercase font-semibold text-[#aebdca]">FOCUS</span>
-            <span className="text-[#6d7c90]">drag the ring · 1 2 3</span>
+            <span className="text-slate-300 font-semibold">FOCUS</span>
+            <span className="text-slate-400/80 lowercase tracking-normal">
+              drag the ring · 1 2 3
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="uppercase text-[#7f8fa3]">DISTANCE</span>
-            <span className="font-semibold text-[#eef3f9]">{telemetry.distanceCm} cm</span>
+            <span className="text-slate-400">DISTANCE</span>
+            <span className="text-white font-semibold tracking-normal">{focusDistText}</span>
           </div>
         </div>
 
-        {/* Row 1 Controls: Foreground / Middle / Background + Continuous Distance Slider */}
-        <div className="mt-1.5 flex items-center gap-2.5">
-          <div className="grid grid-cols-3 gap-1 flex-shrink-0">
-            {(['foreground', 'middle', 'background'] as FocusPreset[]).map((presetKey) => {
-              const target = SUBJECT_TARGETS[presetKey];
-              const isActive = telemetry.activePreset === presetKey;
+        {/* Row 2: [Foreground] [Middle] [Background] + Continuous Distance Slider with DoF Band */}
+        <div className="mt-2 flex items-center gap-2.5">
+          <div className="grid grid-cols-3 bg-[#0a0d13]/90 p-0.5 rounded-lg border border-white/10 shrink-0">
+            {SUBJECTS.map((subj, idx) => {
+              const isSelected = activeSubjectIndex === idx;
               return (
                 <button
-                  key={presetKey}
+                  key={subj.id}
                   type="button"
-                  onClick={() => handleSelectPreset(presetKey)}
-                  className={`px-2.5 py-1 rounded text-[10.5px] font-medium transition-all ${
-                    isActive
-                      ? 'bg-[#dce6f2] text-[#0b0f17] font-semibold shadow-sm'
-                      : 'bg-[#1a202c]/90 text-[#b5c2d1] hover:bg-[#232b3a] hover:text-white border border-white/5'
+                  onClick={() => setFocusD(subj.d)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#bce3ff] text-[#09131c] font-semibold shadow-sm'
+                      : 'text-slate-300 hover:text-white'
                   }`}
                 >
-                  {target.label}
+                  {subj.shortName}
                 </button>
               );
             })}
           </div>
 
-          <div className="flex-1 flex items-center">
+          {/* Continuous Focus Distance Slider with Live Depth-of-Field Zone Band */}
+          <div className="relative flex-1 h-7 flex items-center">
+            <div className="w-full h-1.5 rounded-full bg-slate-800/90 border border-white/10 overflow-hidden relative">
+              {/* Shaded DoF Sharp Zone on Slider Track */}
+              <div
+                className="absolute top-0 bottom-0 bg-sky-300/35"
+                style={{
+                  left: `${nearSliderT * 100}%`,
+                  width: `${Math.max(2, (farSliderT - nearSliderT) * 100)}%`,
+                }}
+              />
+            </div>
+
             <input
               type="range"
-              min={30}
-              max={110}
-              step={1}
-              value={telemetry.distanceCm}
-              onChange={(e) => setDistanceCm(Number(e.target.value))}
-              aria-label="Focus distance in centimeters"
-              className="optical-slider w-full"
+              min={0}
+              max={1}
+              step={0.002}
+              value={sliderVal}
+              onChange={(e) => setFocusD(sliderToDist(parseFloat(e.target.value)))}
+              aria-label="Focus distance"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-10"
+            />
+
+            {/* Custom Crisp Slider Thumb */}
+            <div
+              className="pointer-events-none absolute w-3.5 h-3.5 rounded-full bg-[#cbe8ff] border-2 border-[#0b121a] shadow-md -translate-x-1/2"
+              style={{ left: `${sliderVal * 100}%` }}
             />
           </div>
         </div>
 
-        {/* Subtle Divider */}
-        <div className="my-2 h-px bg-white/10" />
-
-        {/* Row 2 Header: APERTURE | f-number | LENS */}
-        <div className="grid grid-cols-2 text-[9px] font-mono tracking-wider">
-          <div className="flex items-center justify-between pr-3">
-            <span className="uppercase font-semibold text-[#aebdca]">APERTURE</span>
-            <span className="text-[#6d7c90]">f-number</span>
+        {/* Row 3 Headers: APERTURE | LENS */}
+        <div className="mt-3 grid grid-cols-2 gap-3 text-[10px] font-mono tracking-[0.12em] text-slate-400 uppercase">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-300 font-semibold">APERTURE</span>
+            <span className="w-2.5 h-2.5 rounded-full border border-slate-400/60 inline-block" />
           </div>
-          <div className="pl-2">
-            <span className="uppercase font-semibold text-[#aebdca]">LENS</span>
+          <div>
+            <span className="text-slate-300 font-semibold">LENS</span>
           </div>
         </div>
 
-        {/* Row 2 Controls: f/2 | f/5.6 | f/16  +  Assembled | Exploded */}
-        <div className="mt-1.5 grid grid-cols-2 gap-2.5">
-          <div className="grid grid-cols-3 gap-1">
-            {APERTURE_OPTIONS.map((fVal) => {
-              const isActive = aperture === fVal;
+        {/* Row 4 Segmented Controls: [f/2] [f/5.6] [f/16]  |  [Assembled] [Exploded] */}
+        <div className="mt-1.5 grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 bg-[#0a0d13]/90 p-0.5 rounded-lg border border-white/10">
+            {APERTURE_PRESETS.map((ap) => {
+              const isSelected = Math.abs(apertureN - ap) < 0.2;
               return (
                 <button
-                  key={fVal}
+                  key={ap}
                   type="button"
-                  onClick={() => setAperture(fVal)}
-                  className={`py-1 rounded text-[10.5px] font-mono transition-all ${
-                    isActive
-                      ? 'bg-[#dce6f2] text-[#0b0f17] font-semibold shadow-sm'
-                      : 'bg-[#1a202c]/90 text-[#b5c2d1] hover:bg-[#232b3a] hover:text-white border border-white/5'
+                  onClick={() => setApertureN(ap)}
+                  className={`py-1 rounded-md text-[11px] font-mono transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#bce3ff] text-[#09131c] font-semibold shadow-sm'
+                      : 'text-slate-300 hover:text-white'
                   }`}
                 >
-                  f/{fVal}
+                  f/{ap}
                 </button>
               );
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-1">
-            {(['assembled', 'exploded'] as LensAssemblyMode[]).map((mode) => {
-              const isActive = assemblyMode === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setAssemblyMode(mode)}
-                  className={`py-1 rounded text-[10.5px] font-medium capitalize transition-all ${
-                    isActive
-                      ? 'bg-[#dce6f2] text-[#0b0f17] font-semibold shadow-sm'
-                      : 'bg-[#1a202c]/90 text-[#b5c2d1] hover:bg-[#232b3a] hover:text-white border border-white/5'
-                  }`}
-                >
-                  {mode}
-                </button>
-              );
-            })}
+          <div className="grid grid-cols-2 bg-[#0a0d13]/90 p-0.5 rounded-lg border border-white/10">
+            <button
+              type="button"
+              onClick={() => setIsExploded(false)}
+              className={`py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                !isExploded
+                  ? 'bg-[#bce3ff] text-[#09131c] font-semibold shadow-sm'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Assembled
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsExploded(true)}
+              className={`py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                isExploded
+                  ? 'bg-[#bce3ff] text-[#09131c] font-semibold shadow-sm'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Exploded
+            </button>
           </div>
         </div>
-      </aside>
+      </div>
 
-      {/* Optional Ground-Glass Viewfinder Inspector (Bottom-Left) */}
-      <GroundGlassInspector
-        telemetry={telemetry}
-        isOpen={inspectorOpen}
-        onToggle={() => setInspectorOpen((prev) => !prev)}
-      />
-
-      {/* Bottom-Right Badge matching screenshot */}
-      <div className="fixed bottom-3.5 right-5 z-20 flex items-center gap-2">
+      {/* BOTTOM-LEFT INTERACTIVE AUTHOR / COPYRIGHT BADGE */}
+      <div className="pointer-events-auto absolute bottom-3.5 left-6 z-20 flex items-center gap-2">
         <a
-          href="https://x.com"
+          href="https://x.com/nayrbryanGaming"
           target="_blank"
-          rel="noreferrer"
-          className="px-2.5 py-1 rounded bg-[#11151e]/80 hover:bg-[#1b2230] border border-white/12 text-[10px] font-mono text-[#b8c4d4] transition-colors"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#11161f]/85 hover:bg-[#1a2230] border border-amber-400/30 text-[11px] font-mono text-amber-200/95 hover:text-amber-100 transition-colors cursor-pointer backdrop-blur-sm shadow-sm"
         >
-          Follow on X
+          <span>© @nayrbryanGaming</span>
+          <ExternalLink className="w-3 h-3 text-amber-300" />
         </a>
       </div>
-    </main>
+
+      {/* BOTTOM-RIGHT ACTION BAR: Camera Preset Switcher, Reset View, Help Modal & X Follow Badge */}
+      <div className="pointer-events-auto absolute bottom-3.5 right-5 z-20 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={cycleCameraPreset}
+          title="Switch Camera Angle (Shortcut: C)"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#11161f]/85 hover:bg-[#1a2230] border border-white/15 text-[11px] font-mono text-slate-200 transition-colors cursor-pointer backdrop-blur-sm"
+        >
+          <Camera className="w-3.5 h-3.5 text-sky-300" />
+          <span>{CAMERA_PRESETS[cameraPresetIndex].name}</span>
+          <span className="text-slate-400 text-[10px]">[C]</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={resetCameraView}
+          title="Reset Camera View (Shortcut: R)"
+          className="p-1.5 rounded-md bg-[#11161f]/85 hover:bg-[#1a2230] border border-white/15 text-slate-300 hover:text-white transition-colors cursor-pointer backdrop-blur-sm"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowHelpModal(true)}
+          title="How the Optical Bench Works (Shortcut: ?)"
+          className="p-1.5 rounded-md bg-[#11161f]/85 hover:bg-[#1a2230] border border-white/15 text-slate-300 hover:text-white transition-colors cursor-pointer backdrop-blur-sm"
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
+        </button>
+
+        <a
+          href="https://x.com/nayrbryanGaming"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Follow @nayrbryanGaming on X"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#11161f]/85 hover:bg-[#1a2230] border border-white/15 text-[11px] font-mono text-slate-200 transition-colors backdrop-blur-sm"
+        >
+          <ExternalLink className="w-3 h-3 text-sky-300" />
+          <span>X · @nayrbryanGaming</span>
+        </a>
+      </div>
+
+      {/* HOW IT WORKS MODAL */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-lg rounded-2xl bg-[#121822] border border-white/20 p-6 shadow-2xl text-slate-200">
+            <button
+              type="button"
+              onClick={() => setShowHelpModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-xs font-mono uppercase tracking-widest text-sky-300">
+              Interactive Optical Bench
+            </div>
+            <h2 className="text-xl font-bold text-white mt-1">
+              How the Plane of Focus Works
+            </h2>
+
+            <div className="mt-4 space-y-3 text-xs leading-relaxed text-slate-300">
+              <p>
+                <strong className="text-white">1. Conjugate Focal Points:</strong> Light rays
+                diverging from a single point on the{' '}
+                <span className="text-sky-300">Plane of Focus</span> refract through the 6-element
+                lens and converge to a single sharp point on the Ground Glass image plane.
+              </p>
+              <p>
+                <strong className="text-white">2. Circle of Confusion (CoC):</strong> Objects in
+                front of or behind the Plane of Focus converge either behind or in front of the
+                Ground Glass, forming a circular blur disc instead of a point.
+              </p>
+              <p>
+                <strong className="text-white">3. Aperture Stop (f/2 vs f/16):</strong> Stopping
+                down the 7-blade iris narrows the light cone angle, shrinking the Circle of
+                Confusion and expanding the <span className="text-sky-300">Sharp Zone</span> (Depth
+                of Field) from 1.5 cm at f/2 to 12.2 cm at f/16.
+              </p>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300">
+              <div>Drag Focus Ring / Gear: Adjust focus</div>
+              <div>Keys 1 / 2 / 3: Focus presets</div>
+              <div>Left-Drag / Scroll: 360° Orbit &amp; Zoom</div>
+              <div>Key C / R / X: Camera / Reset / Explode</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
